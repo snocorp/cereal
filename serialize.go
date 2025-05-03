@@ -33,6 +33,7 @@ func Serialize(value map[string]any, version string) ([]byte, error) {
 func serializeV1(value map[string]any, buf io.Writer) error {
 	buf.Write([]byte{'{'})
 
+	i := 0
 	for k, v := range value {
 		buf.Write([]byte(k))
 		buf.Write([]byte{':'})
@@ -41,6 +42,12 @@ func serializeV1(value map[string]any, buf io.Writer) error {
 		if err != nil {
 			return err
 		}
+
+		if i < len(value)-1 {
+			buf.Write([]byte{','})
+		}
+
+		i++
 	}
 
 	buf.Write([]byte{'}'})

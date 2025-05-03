@@ -62,6 +62,30 @@ func TestSerializeV1_EmptyMap(t *testing.T) {
 	}
 }
 
+func TestSerializeV1_MultiValue(t *testing.T) {
+	buf := bytes.Buffer{}
+	err := serializeV1(map[string]any{"a": 1, "b": true, "c": "hello"}, &buf)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// map keys are not consistently ordered so we need to parse the result
+	m, err := parseV1(&buf)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if m["a"] != 1 {
+		t.Error("expected x.a to be '1' but got", m["a"])
+	}
+	if m["b"] != true {
+		t.Error("expected x.b to be 'true' but got", m["b"])
+	}
+	if m["c"] != "hello" {
+		t.Error("expected x.c to be 'hello' but got", m["c"])
+	}
+}
+
 func TestSerializeV1_SingleBoolTrue(t *testing.T) {
 	buf := bytes.Buffer{}
 	err := serializeV1(map[string]any{"b": true}, &buf)
