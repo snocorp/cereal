@@ -91,6 +91,31 @@ func main() {
 }
 ```
 
+#### Example: Escaping Special Characters
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/snocorp/cereal"
+  "strings"
+)
+
+func main() {
+  serialized := "1{\\}\\::\"\\"hello\\, world\\"}"
+
+  data, err := cereal.Parse(strings.NewReader(serialized))
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println("Parsed:", data)
+  // Parsed: map[string]any{"}:": "\"hello, world\""}
+}
+```
+
 ## Supported Data Types
 
 Cereal supports the following data types for serialization and parsing:
