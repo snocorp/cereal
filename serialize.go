@@ -56,26 +56,18 @@ func serializeV1(value map[string]any, buf io.Writer) error {
 
 func writeValue(value reflect.Value, buf io.Writer, path []string) error {
 	kind := value.Kind()
-	if kind == reflect.Bool {
-		buf.Write([]byte{'b'})
-		if value.Bool() {
-			buf.Write([]byte{'1'})
-		} else {
-			buf.Write([]byte{'0'})
-		}
-	} else if kind == reflect.Int {
-		buf.Write([]byte{'i'})
-		buf.Write([]byte(strconv.FormatInt(value.Int(), 10)))
-	} else if kind == reflect.Float32 {
-		buf.Write([]byte{'f'})
-		buf.Write([]byte(strconv.FormatFloat(value.Float(), 'g', -1, 32)))
-	} else if kind == reflect.Float64 {
-		buf.Write([]byte{'d'})
-		buf.Write([]byte(strconv.FormatFloat(value.Float(), 'g', -1, 64)))
-	} else if kind == reflect.String {
-		buf.Write([]byte{'"'})
-		buf.Write([]byte(value.String()))
-	} else if kind == reflect.Slice {
+	switch kind {
+	case reflect.Bool:
+		writeBool(buf, value.Bool())
+	case reflect.Int:
+		writeInt(buf, value.Int())
+	case reflect.Float32:
+		writeFloat(buf, value.Float())
+	case reflect.Float64:
+		writeDouble(buf, value.Float())
+	case reflect.String:
+		writeString(buf, value.String())
+	case reflect.Slice:
 		buf.Write([]byte{'['})
 		if value.Len() == 0 {
 			buf.Write([]byte{']'})
@@ -91,7 +83,7 @@ func writeValue(value reflect.Value, buf io.Writer, path []string) error {
 				}
 			}
 		}
-	} else if kind == reflect.Map {
+	case reflect.Map:
 		buf.Write([]byte{'{'})
 		mapKeys := value.MapKeys()
 		if len(mapKeys) == 0 {
@@ -106,7 +98,10 @@ func writeValue(value reflect.Value, buf io.Writer, path []string) error {
 				buf.Write([]byte{':'})
 
 				mapValue := value.MapIndex(mapKey)
-				writeValue(mapValue, buf, append(path, mapKey.String()))
+				err := writeValue(mapValue, buf, append(path, mapKey.String()))
+				if err != nil {
+					return err
+				}
 
 				if i < value.Len()-1 {
 					buf.Write([]byte{','})
@@ -115,8 +110,51 @@ func writeValue(value reflect.Value, buf io.Writer, path []string) error {
 				}
 			}
 		}
-	} else {
-		return fmt.Errorf("%v: unsupported value type %v", strings.Join(path, "."), kind)
+	// handle decoded JSON
+	case reflect.Interface:
+		v := value.Interface()
+		if i, ok := v.(int64); ok {
+			writeInt(buf, i)
+		} else if f, ok := v.(float64); ok {
+			writeDouble(buf, f)
+		} else if str, ok := v.(string); ok {
+			writeString(buf, str)
+		} else if b, ok := v.(bool); ok {
+			writeBool(buf, b)
+		} else {
+			return fmt.Errorf("%v: unsupported value type %v for %v", strings.Join(path, "."), kind, value)
+		}
+	default:
+		return fmt.Errorf("%v: unsupported value type %v for %v", strings.Join(path, "."), kind, value)
 	}
 	return nil
+}
+
+func writeBool(buf io.Writer, value bool) {
+	buf.Write([]byte{'b'})
+	if value {
+		buf.Write([]byte{'1'})
+	} else {
+		buf.Write([]byte{'0'})
+	}
+}
+
+func writeString(buf io.Writer, value string) {
+	buf.Write([]byte{'"'})
+	buf.Write([]byte(value))
+}
+
+func writeInt(buf io.Writer, value int64) {
+	buf.Write([]byte{'i'})
+	buf.Write([]byte(strconv.FormatInt(value, 10)))
+}
+
+func writeFloat(buf io.Writer, value float64) {
+	buf.Write([]byte{'f'})
+	buf.Write([]byte(strconv.FormatFloat(value, 'g', -1, 32)))
+}
+
+func writeDouble(buf io.Writer, value float64) {
+	buf.Write([]byte{'d'})
+	buf.Write([]byte(strconv.FormatFloat(value, 'g', -1, 64)))
 }

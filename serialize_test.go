@@ -2,6 +2,8 @@ package cereal
 
 import (
 	"bytes"
+	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -45,8 +47,31 @@ func TestSerializeV1_Unsupported(t *testing.T) {
 		t.Error("expected an error")
 	}
 	msg := err.Error()
-	if msg != "<root>.x: unsupported value type chan" {
+	if !strings.HasPrefix(msg, "<root>.x: unsupported value type chan") {
 		t.Error("expected error to be '<root>.x: unsupported value type chan' but got", msg)
+	}
+}
+
+func TestSerializeV1_Pointer(t *testing.T) {
+	var x *string
+	err := serializeV1(map[string]any{"x": x}, &bytes.Buffer{})
+	if err == nil {
+		t.Error("expected an error")
+	}
+	msg := err.Error()
+	if msg != "<root>.x: unsupported value type ptr for <nil>" {
+		t.Error("expected error to be '<root>.x: unsupported value type ptr for <nil>' but got", msg)
+	}
+}
+
+func TestSerializeV1_Nil(t *testing.T) {
+	err := serializeV1(map[string]any{"x": nil}, &bytes.Buffer{})
+	if err == nil {
+		t.Error("expected an error")
+	}
+	msg := err.Error()
+	if msg != "<root>.x: unsupported value type invalid for <invalid reflect.Value>" {
+		t.Error("expected error to be '<root>.x: unsupported value type invalid for <invalid reflect.Value>' but got", msg)
 	}
 }
 
@@ -235,5 +260,49 @@ func TestSerializeV1_InvalidMapKey(t *testing.T) {
 	msg := err.Error()
 	if msg != "<root>.x: map key type must be string, not int" {
 		t.Error("expected error to be '<root>.x: map key type must be string, not int' but got", msg)
+	}
+}
+
+func TestSerializeV1_InterfaceTypes(t *testing.T) {
+	var v map[string]any
+	json.NewDecoder(strings.NewReader(`{"x":{"d":1.0,"i":2,"s":"a","b":true}}`)).Decode(&v)
+	buf := bytes.Buffer{}
+	err := serializeV1(v, &buf)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// map keys are not consistently ordered so we need to parse the result
+	m, err := parseV1(&buf)
+	if err != nil {
+		t.Error(err)
+	}
+
+	m = m["x"].(map[string]any)
+	if m["d"] != 1.0 {
+		t.Error("expected d to be '1.0' but got", m["a"])
+	}
+	if m["i"] != 2.0 {
+		t.Error("expected i to be '2' but got", m["i"])
+	}
+	if m["s"] != "a" {
+		t.Error("expected s to be 'a' but got", m["s"])
+	}
+	if m["b"] != true {
+		t.Error("expected b to be 'true' but got", m["b"])
+	}
+}
+
+func TestSerializeV1_InvalidInterfaceTypes(t *testing.T) {
+	var v map[string]any
+	json.NewDecoder(strings.NewReader(`{"x":{"nil":null}}`)).Decode(&v)
+	buf := bytes.Buffer{}
+	err := serializeV1(v, &buf)
+	if err == nil {
+		t.Error("expected an error")
+	}
+	msg := err.Error()
+	if msg != "<root>.x.nil: unsupported value type interface for <nil>" {
+		t.Error("expected error to be '<root>.x.nil: unsupported value type interface for <nil>' but got", msg)
 	}
 }
