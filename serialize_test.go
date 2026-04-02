@@ -70,8 +70,8 @@ func TestSerializeV1_Nil(t *testing.T) {
 		t.Error("expected an error")
 	}
 	msg := err.Error()
-	if msg != "<root>.x: unsupported value type invalid for <invalid reflect.Value>" {
-		t.Error("expected error to be '<root>.x: unsupported value type invalid for <invalid reflect.Value>' but got", msg)
+	if msg != "<root>.x: unsupported value <nil>" {
+		t.Error("expected error to be '<root>.x: unsupported value <nil>' but got", msg)
 	}
 }
 
@@ -302,7 +302,7 @@ func TestSerializeV1_InvalidInterfaceTypes(t *testing.T) {
 		t.Error("expected an error")
 	}
 	msg := err.Error()
-	if msg != "<root>.x.nil: unsupported value type interface for <nil>" {
-		t.Error("expected error to be '<root>.x.nil: unsupported value type interface for <nil>' but got", msg)
+	if msg != "<root>.x.nil: unsupported value <nil>" {
+		t.Error("expected error to be '<root>.x.nil: unsupported value <nil>' but got", msg)
 	}
 }

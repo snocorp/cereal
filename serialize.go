@@ -31,31 +31,21 @@ func Serialize(value map[string]any, version string) ([]byte, error) {
 }
 
 func serializeV1(value map[string]any, buf io.Writer) error {
-	buf.Write([]byte{'{'})
-
-	i := 0
-	for k, v := range value {
-		buf.Write([]byte(k))
-		buf.Write([]byte{':'})
-
-		err := writeValue(reflect.ValueOf(v), buf, []string{"<root>", k})
-		if err != nil {
-			return err
-		}
-
-		if i < len(value)-1 {
-			buf.Write([]byte{','})
-		}
-
-		i++
-	}
-
-	buf.Write([]byte{'}'})
-	return nil
+	return writeValue(reflect.ValueOf(value), buf, []string{"<root>"})
 }
 
 func writeValue(value reflect.Value, buf io.Writer, path []string) error {
 	kind := value.Kind()
+
+	if kind == reflect.Interface {
+		v := value.Interface()
+		if v == nil {
+			return fmt.Errorf("%v: unsupported value %v", strings.Join(path, "."), v)
+		}
+		kind = reflect.TypeOf(v).Kind()
+		value = reflect.ValueOf(v)
+	}
+
 	switch kind {
 	case reflect.Bool:
 		writeBool(buf, value.Bool())
@@ -89,8 +79,7 @@ func writeValue(value reflect.Value, buf io.Writer, path []string) error {
 		if len(mapKeys) == 0 {
 			buf.Write([]byte{'}'})
 		} else {
-			for i := 0; i < len(mapKeys); i++ {
-				mapKey := mapKeys[i]
+			for i, mapKey := range mapKeys {
 				if mapKey.Kind() != reflect.String {
 					return fmt.Errorf("%v: map key type must be string, not %v", strings.Join(path, "."), mapKey.Kind())
 				}
@@ -109,20 +98,6 @@ func writeValue(value reflect.Value, buf io.Writer, path []string) error {
 					buf.Write([]byte{'}'})
 				}
 			}
-		}
-	// handle decoded JSON
-	case reflect.Interface:
-		v := value.Interface()
-		if i, ok := v.(int64); ok {
-			writeInt(buf, i)
-		} else if f, ok := v.(float64); ok {
-			writeDouble(buf, f)
-		} else if str, ok := v.(string); ok {
-			writeString(buf, str)
-		} else if b, ok := v.(bool); ok {
-			writeBool(buf, b)
-		} else {
-			return fmt.Errorf("%v: unsupported value type %v for %v", strings.Join(path, "."), kind, value)
 		}
 	default:
 		return fmt.Errorf("%v: unsupported value type %v for %v", strings.Join(path, "."), kind, value)
