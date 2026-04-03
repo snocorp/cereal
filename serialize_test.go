@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestSerialize(t *testing.T) {
+func TestSerialize_Empty(t *testing.T) {
 	b, err := Serialize(map[string]any{}, "1")
 	if err != nil {
 		t.Error(err)
@@ -260,6 +260,42 @@ func TestSerializeV1_InvalidMapKey(t *testing.T) {
 	msg := err.Error()
 	if msg != "<root>.x: map key type must be string, not int" {
 		t.Error("expected error to be '<root>.x: map key type must be string, not int' but got", msg)
+	}
+}
+
+func TestSerializeV1_CurlyBraceInKey(t *testing.T) {
+	buf := bytes.Buffer{}
+	err := serializeV1(map[string]any{"x}": 5}, &buf)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if buf.String() != "{x\\}:i5}" {
+		t.Error("expected '{x\\}:i5}' but got", buf.String())
+	}
+}
+
+func TestSerializeV1_ColonInKey(t *testing.T) {
+	buf := bytes.Buffer{}
+	err := serializeV1(map[string]any{"x:": 5}, &buf)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if buf.String() != "{x\\::i5}" {
+		t.Error("expected '{x\\::i5}' but got", buf.String())
+	}
+}
+
+func TestSerializeV1_BackslashInKey(t *testing.T) {
+	buf := bytes.Buffer{}
+	err := serializeV1(map[string]any{"x\\": 5}, &buf)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if buf.String() != "{x\\\\:i5}" {
+		t.Error("expected '{x\\\\:i5}' but got", buf.String())
 	}
 }
 

@@ -85,7 +85,7 @@ func TestParseMapV1_BadInput(t *testing.T) {
 	}
 }
 
-func TestParseMapV1_EscapedKey(t *testing.T) {
+func TestParseMapV1_EscapedCurlyBrace(t *testing.T) {
 	result, err := parseMapV1(bytes.NewBuffer([]byte{'\\', '}', ':', 'b', '1', '}'}), []string{})
 	if err != nil {
 		t.Error(err)
@@ -96,6 +96,20 @@ func TestParseMapV1_EscapedKey(t *testing.T) {
 	}
 	if result["}"] != true {
 		t.Error("expected '}' to be true")
+	}
+}
+
+func TestParseMapV1_EscapedColon(t *testing.T) {
+	result, err := parseMapV1(bytes.NewBuffer([]byte{'\\', ':', ':', 'b', '1', '}'}), []string{})
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(result) != 1 {
+		t.Error("expected single entry")
+	}
+	if result[":"] != true {
+		t.Error("expected ':' to be true")
 	}
 }
 

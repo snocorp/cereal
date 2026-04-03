@@ -83,7 +83,12 @@ func writeValue(value reflect.Value, buf io.Writer, path []string) error {
 				if mapKey.Kind() != reflect.String {
 					return fmt.Errorf("%v: map key type must be string, not %v", strings.Join(path, "."), mapKey.Kind())
 				}
-				buf.Write([]byte(mapKey.String()))
+
+				key := mapKey.String()
+				key = strings.ReplaceAll(key, "\\", "\\\\")
+				key = strings.ReplaceAll(key, ":", "\\:")
+				key = strings.ReplaceAll(key, "}", "\\}")
+				buf.Write([]byte(key))
 				buf.Write([]byte{':'})
 
 				mapValue := value.MapIndex(mapKey)
