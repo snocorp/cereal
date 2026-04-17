@@ -7,6 +7,12 @@ import (
 	"testing"
 )
 
+type Struct struct {
+	Int int
+
+	private string
+}
+
 func TestSerialize_Empty(t *testing.T) {
 	b, err := Serialize(map[string]any{}, "1")
 	if err != nil {
@@ -15,6 +21,32 @@ func TestSerialize_Empty(t *testing.T) {
 
 	if string(b) != "1{}" {
 		t.Error("expected '1{}' but got", string(b))
+	}
+}
+
+func TestSerialize_Struct(t *testing.T) {
+	b, err := Serialize(Struct{Int: 5, private: "hi"}, "1")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if string(b) != "1{Int:i5,private:\"hi}" {
+		t.Error("expected '1{Int:i5,private:\"hi}' but got", string(b))
+	}
+}
+
+func TestSerializeV1_StructInvalidType(t *testing.T) {
+	type Struct struct {
+		Ptr *int
+	}
+	a := 5
+	err := serializeV1(Struct{Ptr: &a}, &bytes.Buffer{})
+	if err == nil {
+		t.Error("expected an error")
+	}
+
+	if !strings.HasPrefix(err.Error(), "<root>.Ptr: unsupported value type ptr for") {
+		t.Error("expected '<root>.Ptr: unsupported value type ptr for' but got", err.Error())
 	}
 }
 

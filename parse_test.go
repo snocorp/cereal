@@ -258,6 +258,20 @@ func TestParseMapV1_SingleMap(t *testing.T) {
 	}
 }
 
+func TestParseMapV1_SingleMapEmptyKey(t *testing.T) {
+	result, err := parseMapV1(bytes.NewBuffer([]byte{'m', ':', '{', ':', 'b', '1', '}', '}'}), []string{})
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(result) != 1 {
+		t.Error("expected single entry")
+	}
+	if result["m"].(map[string]any)[""] != true {
+		t.Error("expected '' to be true")
+	}
+}
+
 func TestParseMapV1_MultiMap(t *testing.T) {
 	result, err := parseMapV1(bytes.NewBuffer([]byte{'m', ':', '{', 'b', ':', 'b', '1', '}', ',', 'n', ':', '{', 'b', ':', 'b', '0', '}', '}'}), []string{})
 	if err != nil {

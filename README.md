@@ -21,7 +21,7 @@ go get github.com/snocorp/cereal
 
 ### Serialize
 
-The `Serialize` function converts a `map[string]any` into a serialized byte slice. It requires a version string to specify the serialization format. Currently the only supported version is "1".
+The `Serialize` function converts a `map[string]any` or a `struct` into a serialized byte slice. It requires a version string to specify the serialization format. Currently the only supported version is "1".
 
 #### Function Signature
 
@@ -53,7 +53,47 @@ func main() {
 	}
 
 	fmt.Println("Serialized:", string(serialized))
-  // Serialized: 1{key:"value,num:i42,flag:b1}
+	// Serialized: 1{key:"value,num:i42,flag:b1}
+}
+```
+
+### Unmarshal
+
+The `Unmarshal` function reads a byte array and stores the parsed value into the pointer provided as the second argument. It automatically detects the version from the first byte of the input.
+
+#### Function Signature
+
+```go
+func Unmarshal(data []byte, v any) error
+```
+
+#### Example: Unmarshal Data into a struct
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/snocorp/cereal"
+)
+
+type Example struct {
+	key string
+	num int
+	flag bool
+}
+
+func main() {
+	serialized := []byte("1{key:\"value,num:i42,flag:b1}")
+
+	example := Example{}
+	err := cereal.Unmarshal(serialized, &example)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println("Parsed:", example)
 }
 ```
 
@@ -75,7 +115,7 @@ package main
 import (
 	"fmt"
 	"github.com/snocorp/cereal"
-  "strings"
+	"strings"
 )
 
 func main() {

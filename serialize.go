@@ -11,7 +11,7 @@ import (
 )
 
 // Serialize takes a map and a version string, and returns the serialized byte representation.
-func Serialize(value map[string]any, version string) ([]byte, error) {
+func Serialize(value any, version string) ([]byte, error) {
 	versionBytes := []byte(version)
 	if len(versionBytes) != 1 {
 		return []byte{}, errors.New("version must be exactly one byte")
@@ -30,7 +30,7 @@ func Serialize(value map[string]any, version string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func serializeV1(value map[string]any, buf io.Writer) error {
+func serializeV1(value any, buf io.Writer) error {
 	return writeValue(reflect.ValueOf(value), buf, []string{"<root>"})
 }
 
@@ -84,10 +84,7 @@ func writeValue(value reflect.Value, buf io.Writer, path []string) error {
 					return fmt.Errorf("%v: map key type must be string, not %v", strings.Join(path, "."), mapKey.Kind())
 				}
 
-				key := mapKey.String()
-				key = strings.ReplaceAll(key, "\\", "\\\\")
-				key = strings.ReplaceAll(key, ":", "\\:")
-				key = strings.ReplaceAll(key, "}", "\\}")
+				key := escapeKey(mapKey.String())
 				buf.Write([]byte(key))
 				buf.Write([]byte{':'})
 
@@ -104,10 +101,42 @@ func writeValue(value reflect.Value, buf io.Writer, path []string) error {
 				}
 			}
 		}
+	case reflect.Struct:
+		buf.Write([]byte{'{'})
+
+		v := value.Interface()
+		t := reflect.TypeOf(v)
+		fields := reflect.VisibleFields(t)
+		for i, f := range fields {
+			key := escapeKey(f.Name)
+			val := value.Field(i)
+
+			buf.Write([]byte(key))
+			buf.Write([]byte{':'})
+
+			err := writeValue(val, buf, append(path, key))
+			if err != nil {
+				return err
+			}
+
+			if i < len(fields)-1 {
+				buf.Write([]byte{','})
+			} else {
+				buf.Write([]byte{'}'})
+			}
+		}
+
 	default:
 		return fmt.Errorf("%v: unsupported value type %v for %v", strings.Join(path, "."), kind, value)
 	}
 	return nil
+}
+
+func escapeKey(key string) string {
+	key = strings.ReplaceAll(key, "\\", "\\\\")
+	key = strings.ReplaceAll(key, ":", "\\:")
+	key = strings.ReplaceAll(key, "}", "\\}")
+	return key
 }
 
 func writeBool(buf io.Writer, value bool) {
